@@ -1,8 +1,10 @@
 import discord
 import time
 import random
-# client = discord.Client()
-
+import requests
+from bs4 import BeautifulSoup
+import urllib.parse
+import urllib.request
 prefix = "!"
 
 class rspData():
@@ -41,11 +43,94 @@ class MyClient(discord.Client):
                 embedVar = discord.Embed(title="나는야 나무", description="아낌없이 주는 자람이야.\n 아래와 같이 명령어를 사용해볼래?", color=0x00ff00)
                 embedVar.add_field(name="%shelp"%prefix, value="지금 보는 것 처럼 내가 할 수 있는 일을 알 수 있지!", inline=False)
                 embedVar.add_field(name="%srsp"%prefix, value="친구 두명을 @멘션 하면 내가 가위바위보 심판을 할 수 있어\n`%srsp @닉네임 @닉넹임 start`"%prefix, inline=False)
+                embedVar.add_field(name="%s너의전적은?"%prefix, value="롤 닉네임을 검색해서 전적조회가 가능해\n`%s너의전적은? 롤닉네임`"%prefix, inline=False)
+                embedVar.add_field(name="%s실검"%prefix, value="네이버 실시간 검색어를 불러와요.\n`%s실검`"%prefix, inline=False)
+                embedVar.add_field(name="잠수누구인가?", value="오프라인 사람들 호출\n`잠수누구인가?`", inline=False)
                 await message.channel.send(embed=embedVar)
 
         if message.content.startswith('%shello' % prefix):
             await message.channel.send('Hello!')
         
+        cmd = "너의전적은?"
+        if message.content.startswith(prefix + cmd):
+
+            args = message.content[len(prefix+cmd):].strip()
+            headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'}
+            summonerName = urllib.parse.quote(args)
+            req = urllib.request.urlopen(url="http://www.op.gg/summoner/userName=%s" % summonerName)
+
+            data = req.read()
+            
+            soup = BeautifulSoup(data, "html.parser")
+            rankType = soup.find('div', class_='RankType').text
+            tierRank = soup.find('div', class_='TierRank').text.strip()
+            if tierRank =="Unranked":
+                level = soup.find('span', class_='Level').text
+                embedVar = discord.Embed(title="너의 롤 전적은?", description="롤 전적으로 보여줘요\n\n언랭이네요. 랭크좀 돌리세요,,,\n레벨이라도 알려드릴게요.", color=0x00ff00)
+                embedVar.add_field(name="레벨", value=level, inline=False)
+                await message.channel.send(embed=embedVar)
+                return
+            leaguePoints = soup.find('span', class_='LeaguePoints').text
+            wins = soup.find('span', class_='wins').text
+            losses = soup.find('span', class_='losses').text
+            winratio = soup.find('span', class_='winratio').text
+        
+            summonerInfo = (rankType, tierRank, leaguePoints, wins, losses, winratio)
+            summonerInfoNames = ("랭크 타입", "랭크 티어", "LP", "승리 횟수", "패배 횟수", "승률")
+            embedVar = discord.Embed(title="너의 롤 전적은?", description="롤 전적으로 보여줘요\n\n", color=0x00ff00)
+
+            for idx in range(len(summonerInfo)):
+                embedVar.add_field(name=summonerInfoNames[idx], value=summonerInfo[idx], inline=False)
+            
+            await message.channel.send(embed=embedVar)
+
+        if message.content.startswith('%s실검' % prefix):
+             
+            headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'}
+            
+            html = requests.get('https://datalab.naver.com/keyword/realtimeList.naver?age=all', headers = headers)
+            
+            soup = BeautifulSoup(html.content, 'html.parser')
+            titles = soup.find_all("span", {"class": "item_title"})
+            naver_ranked = ""
+            links =""
+
+            for idx in range(len(titles)):
+                naver_ranked += "["+str(idx+1)+"] "+ titles[idx].get_text() + "\n"
+                links +="[link]" + "https://search.naver.com/search.naver?where=nexearch&query=" + str(urllib.parse.quote(str(titles[idx].get_text())))+ "\n"
+                
+            embedVar = discord.Embed(title="실검에 오를 것이다~", description="요즘 핫한 키워드를 보여줘요", color=0x00ff00)
+            embedVar.add_field(name="네이버 실시간 검색어", value=naver_ranked, inline=False)
+
+            embedVar2 = discord.Embed(title="실검에 오를 것이다~", description="요즘 핫한 키워드를 보여줘요", color=0x00ff00)
+            for idx in range(len(titles)):
+                naver_ranked = "["+str(idx+1)+"] "+ titles[idx].get_text()
+                link ="[link] " + "https://search.naver.com/search.naver?where=nexearch&query=" + str(urllib.parse.quote(str(titles[idx].get_text())))
+                embedVar2.add_field(name=naver_ranked, value=link, inline=False)
+
+            await message.channel.send(embed=embedVar)
+            await message.channel.send(embed=embedVar2)
+
+        if message.content.startswith('잠수누구인가?'):
+            sleep_members = []
+            tmpStr = ""
+            
+            for member in client.get_all_members():
+                
+                if str(member.status) == "offline":
+                    if member.bot == True:
+                        continue
+                    sleep_members.append(member.id)
+
+            for sleep_member in sleep_members:
+                tmpStr += "<@!" + str(sleep_member) + "> "
+
+            embedVar = discord.Embed(title="지금 누가 쿨쿨 자고있나?", description="자고 있는 사람 누구인가?", color=0x00ff00)
+            embedVar.set_image(url="https://pds.joins.com/news/component/htmlphoto_mmdata/201904/23/29e0472f-b406-4bab-aab5-764b643fc012.jpg")
+            embedVar.add_field(name="관심법", value="보아하니 %s 자고 있구만" %tmpStr, inline=False)
+            await message.channel.send(embed=embedVar)
+            await message.channel.send(file=discord.File('yellow.jpg'))
+
         if message.content.startswith('%srsp' % prefix):
             args = message.content.split(' ')[1:]
             rsp_s = ('가위','찌','시저','씨저')
@@ -78,7 +163,6 @@ class MyClient(discord.Client):
                             return
                     return
                 if message.guild == rd.serverName:
-                    print(message.guild)
                     await message.channel.send("노노 여기서는 안돼~")
                     return
                 if len(args) == 0:
@@ -139,6 +223,7 @@ class MyClient(discord.Client):
                 await rd.dmChannel_1.send("예외가 발생했어요.")
                 await rd.dmChannel_2.send("예외가 발생했어요.")
                 await rd.currentChannel.send("예외가 발생했어요.")
+
 
 
 client = MyClient()
