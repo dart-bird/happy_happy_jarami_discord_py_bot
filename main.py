@@ -1,7 +1,6 @@
 import discord
 import time
 import random
-import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 import urllib.request
@@ -20,7 +19,7 @@ rd = rspData()
 class MyClient(discord.Client):
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
-
+        await client.change_presence(activity=discord.Game(name="행복하게 자라면서 %shelp"%prefix))
     async def on_message(self, message):
         if message.author == client.user:
             return
@@ -55,7 +54,6 @@ class MyClient(discord.Client):
         if message.content.startswith(prefix + cmd):
 
             args = message.content[len(prefix+cmd):].strip()
-            headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'}
             summonerName = urllib.parse.quote(args)
             req = urllib.request.urlopen(url="http://www.op.gg/summoner/userName=%s" % summonerName)
 
@@ -86,11 +84,14 @@ class MyClient(discord.Client):
 
         if message.content.startswith('%s실검' % prefix):
              
-            headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'}
+            # headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'}
             
-            html = requests.get('https://datalab.naver.com/keyword/realtimeList.naver?age=all', headers = headers)
+            # html = requests.get('https://datalab.naver.com/keyword/realtimeList.naver?age=all', headers = headers)
+            req = urllib.request.urlopen(url="https://datalab.naver.com/keyword/realtimeList.naver?age=all",)
+            req = urllib.request.Request("https://datalab.naver.com/keyword/realtimeList.naver?age=all",  headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+            data = urllib.request.urlopen(req).read()
             
-            soup = BeautifulSoup(html.content, 'html.parser')
+            soup = BeautifulSoup(data, 'html.parser')
             titles = soup.find_all("span", {"class": "item_title"})
             naver_ranked = ""
             links =""
@@ -107,7 +108,7 @@ class MyClient(discord.Client):
                 naver_ranked = "["+str(idx+1)+"] "+ titles[idx].get_text()
                 link ="[link] " + "https://search.naver.com/search.naver?where=nexearch&query=" + str(urllib.parse.quote(str(titles[idx].get_text())))
                 embedVar2.add_field(name=naver_ranked, value=link, inline=False)
-
+            
             await message.channel.send(embed=embedVar)
             await message.channel.send(embed=embedVar2)
 
@@ -223,8 +224,6 @@ class MyClient(discord.Client):
                 await rd.dmChannel_1.send("예외가 발생했어요.")
                 await rd.dmChannel_2.send("예외가 발생했어요.")
                 await rd.currentChannel.send("예외가 발생했어요.")
-
-
 
 client = MyClient()
 client.run('your token')
