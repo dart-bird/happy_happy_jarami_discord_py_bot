@@ -1,0 +1,9 @@
+version: '3.3'
+
+services:
+  jaram_bot:
+    build:
+      context: .
+    image: discord-bot-py-jaram
+    container_name: jarami_discord_py_bot
+    restart: always
